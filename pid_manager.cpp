@@ -3,18 +3,59 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <vector>
+#include <algorithm>
+#include <new>
 
 #define MIN_PID 100
 #define MAX_PID 1000
 
-class PIDMan {
+using namespace std;
+
+class PIDManager {
 public:
-int allocate_map(){} // Creates and initializes a data structure for representing pids; returns −1 if unsuccessful, 1 if successful
-int allocate_pid(){} // Allocates and returns a pid; returns −1 if unable to allocate a pid (all pids are in use)
-void releaser_pid(int pid){} // Releases a pid
-private:
-    int bitmap[SIZE]; // Array bitmap( gotta assign some SIZE)
-}
+    // Initializing bitmap for MIN_PID to MAX_PID & Return 1 on success, -1 on failure
+    int allocate_map(){
+        try {
+        // Compute the number of PID
+        const size_t number_of_pid = static_cast<size_t>(MAX_PID - MIN_PID + 1); // 901 total PIDs
+
+        // (allocate size if needed and reset to all 0s (free))
+        if (bitmap_.size() != number_of_pid) {
+            bitmap_.assign(number_of_pid, 0);
+        } else {
+            fill(bitmap_.begin(), bitmap_.end(), 0);
+        }
+        // PIDs are now available
+        is_ready_ = true;
+        return 1;   // success
+
+        // allocation failure (return -1)
+        } catch (const bad_alloc&) {
+            is_ready_ = false;
+            bitmap_.clear();
+            return -1;
+        // unexpected failure (return -1)
+        } catch (...) {
+            is_ready_ = false;
+            bitmap_.clear();
+            return -1;
+        }
+    }
+
+    // to test my funcion allocate_map() in main()
+    size_t bitmap_size() const { return bitmap_.size(); }
+    bool is_initialized() const { return is_ready_; }
+
+
+    int allocate_pid(){return -1;} // Allocates and returns a pid; returns −1 if unable to allocate a pid (all pids are in use)
+    void releaser_pid(){} // Releases a pid
+
+    private:
+        vector<unsigned char> bitmap_; // 0 or 1
+        bool is_ready_ = false; // initialized to false, will be true if allocate_map() is successful
+};
+
 int main(){
 /*
 Requirement test cases:
@@ -37,5 +78,14 @@ Attempt to allocate a PID when the range is exhausted (MAX_PID - MIN_PID + 1 all
 Check if the function returns -1, indicating that all PIDs are in use.
 
 */
+
+    // testing allocate_map() function with output of bitmap size and success/failure message
+    PIDManager pid_manager;
+    int result = pid_manager.allocate_map();
+    if (result == 1) {
+        cout << "allocate_map() success; bitmap size = " << pid_manager.bitmap_size() << '\n';
+    } else {
+        cout << "allocate_map() failed\n";
+    }
 return 0;
 }
