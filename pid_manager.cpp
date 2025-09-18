@@ -48,7 +48,18 @@ public:
     bool is_initialized() const { return is_ready_; }
 
 
-    int allocate_pid(){return -1;} // Allocates and returns a pid; returns −1 if unable to allocate a pid (all pids are in use)
+    int allocate_pid(){
+        if(!is_ready_ || bitmap_.empty()){
+                return -1;
+        }
+        for (size_t i = 0; i <bitmap_.size(); ++i){
+                if(bitmap_[i] == 0){
+                bitmap_[i] = 1; // used mark
+                return static_cast<int>(MIN_PID +i);//return pid value
+                }
+        }
+        return -1;}
+   // Allocates and returns a pid; returns −1 if unable to allocate a pid (all pids are in use)
     void releaser_pid(){} // Releases a pid
 
     private:
@@ -87,5 +98,13 @@ Check if the function returns -1, indicating that all PIDs are in use.
     } else {
         cout << "allocate_map() failed\n";
     }
+//TEST FOR ALLOCATED_PID
+        cout << "Allocating 5 PIDS test...\n";
+        int pids[5];
+        for (int i = 0; i <5; ++i){
+                pids[i] = pid_manager.allocate_pid();
+                cout << "Allocated PID: " << pids[i] << endl;
+        }
+
 return 0;
 }
