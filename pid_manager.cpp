@@ -60,7 +60,21 @@ public:
         }
         return -1;}
    // Allocates and returns aPID; returns −1 if unable to allocate aPID (all pids are in use)
-    void releaser_pid(){} // Releases aPID
+    
+   // Releases a PID, making it available again
+void release_pid(int pid) {
+    if (!is_ready_ || bitmap_.empty()) {
+        // if allocate_map() hasn't been called yet, just ignore
+        return;
+    }
+    if (pid < MIN_PID || pid > MAX_PID) {
+        // invalid PID, ignore
+        return;
+    }
+    size_t index = static_cast<size_t>(pid - MIN_PID);
+    bitmap_[index] = 0; // mark it as free again
+}
+
 
     private:
         vector<unsigned char> bitmap_; // 0 or 1
@@ -95,6 +109,11 @@ Check if the function returns -1, indicating that all PIDs are in use.
     int test_pid = test_manager.allocate_pid();
     cout << "allocate_pid() before allocate_map returned: " << test_pid << " (should be -1)" << endl << endl;
 
+// what if test case: releasing before allocate_map
+    test_manager.release_pid(MIN_PID); 
+    cout << "release_pid(MIN_PID) before allocate_map(): safe no-op (program continues)\n\n";
+
+
     // forking to create parent and child processes to test independent PID allocation
     pid_t pid = fork();
     if (pid < 0) {
@@ -112,7 +131,16 @@ Check if the function returns -1, indicating that all PIDs are in use.
             for (int i = 0; i < 3; ++i) {
                 pids[i] = child_manager.allocate_pid();
                 cout << "Child: Allocated PID: " << pids[i] << endl;
-                // child_manager.release_pid(pids[i]); // UNCOMMENT WHEN IMPLEMENTED
+                // release the pids we just got
+                for (int i =0; i < 3; ++i) {
+                    child_manager.release_pid(pids[i]);
+                    cout << "Child: Released PID: " << pids[i] << endl;
+                }
+                // allocate again to see if they are available
+                for (int i = 0; i < 3; ++i) {
+                    int again = child_manager.allocate_pid();
+                    cout << "Child: Allocated again: " << again << endl;
+                }
             }
             cout << "Child: completed work, releasing PIDs..." << endl;
         } else {
@@ -129,7 +157,16 @@ Check if the function returns -1, indicating that all PIDs are in use.
             for (int i = 0; i < 3; ++i) {
                 pids[i] = parent_manager.allocate_pid();
                 cout << "Parent: Allocated PID: " << pids[i] << endl;
-                // parent_manager.release_pid(pids[i]); // UNCOMMENT WHEN IMPLEMENTED
+                // release the pids we just got
+                for (int i = 0; i < 3; ++i) {
+                    parent_manager.release_pid(pids[i]);
+                    cout << "Parent: Released PID: " << pids[i] << endl;
+                }
+                // allocate again to see if they are available
+                for (int i = 0; i < 3; ++i) {
+                    int again = parent_manager.allocate_pid();
+                    cout << "Parent: Allocated again: " << again << endl;
+                }
             }
             cout << "Parent: completed work, releasing PIDs..." << endl;
         } else {
