@@ -1,4 +1,4 @@
-//Group Members: 
+//Group Members: Celeste Garlejo, Nadia Ghanizada, Sara Lee, Martin Nguyen
 #include <iostream>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -55,19 +55,19 @@ public:
         for (size_t i = 0; i <bitmap_.size(); ++i){
                 if(bitmap_[i] == 0){
                 bitmap_[i] = 1; // used mark
-                return static_cast<int>(MIN_PID +i);//return pid value
+                return static_cast<int>(MIN_PID +i);//returnPID value
                 }
         }
         return -1;}
-   // Allocates and returns a pid; returns −1 if unable to allocate a pid (all pids are in use)
-    void releaser_pid(){} // Releases a pid
+   // Allocates and returns aPID; returns −1 if unable to allocate aPID (all pids are in use)
+    void releaser_pid(){} // Releases aPID
 
     private:
         vector<unsigned char> bitmap_; // 0 or 1
         bool is_ready_ = false; // initialized to false, will be true if allocate_map() is successful
 };
 
-int main(){
+int main() {
 /*
 Requirement test cases:
 Call allocate_map to initialize the data structure.
@@ -90,21 +90,76 @@ Check if the function returns -1, indicating that all PIDs are in use.
 
 */
 
-    // testing allocate_map() function with output of bitmap size and success/failure message
-    PIDManager pid_manager;
-    int result = pid_manager.allocate_map();
-    if (result == 1) {
-        cout << "allocate_map() success; bitmap size = " << pid_manager.bitmap_size() << '\n';
-    } else {
-        cout << "allocate_map() failed\n";
+// what if test case: calling allocate_pid before allocate_map
+    PIDManager test_manager;
+    int test_pid = test_manager.allocate_pid();
+    cout << "allocate_pid() before allocate_map returned: " << test_pid << " (should be -1)" << endl << endl;
+
+    // forking to create parent and child processes to test independent PID allocation
+    pid_t pid = fork();
+    if (pid < 0) {
+        cerr << "fork failed" << endl;
+        return 1;
     }
-//TEST FOR ALLOCATED_PID
-        cout << "Allocating 5 PIDS test...\n";
-        int pids[5];
-        for (int i = 0; i <5; ++i){
-                pids[i] = pid_manager.allocate_pid();
-                cout << "Allocated PID: " << pids[i] << endl;
+
+    if (pid == 0) {
+        // child process
+        cout << "--- Child Process ---" << endl;
+        PIDManager child_manager;
+        if (child_manager.allocate_map() == 1) {
+            cout << "Child: allocate_map() success, bitmap size = " << child_manager.bitmap_size() << endl;
+            int pids[3];
+            for (int i = 0; i < 3; ++i) {
+                pids[i] = child_manager.allocate_pid();
+                cout << "Child: Allocated PID: " << pids[i] << endl;
+                // child_manager.release_pid(pids[i]); // UNCOMMENT WHEN IMPLEMENTED
+            }
+            cout << "Child: completed work, releasing PIDs..." << endl;
+        } else {
+            cout << "Child: allocate_map() failed" << endl;
+        }
+        _exit(0);
+    } else {
+        // parent process
+        cout << "--- Parent Process ---" << endl;
+        PIDManager parent_manager;
+        if (parent_manager.allocate_map() == 1) {
+            cout << "Parent: allocate_map() success, bitmap size = " << parent_manager.bitmap_size() << endl;
+            int pids[3];
+            for (int i = 0; i < 3; ++i) {
+                pids[i] = parent_manager.allocate_pid();
+                cout << "Parent: Allocated PID: " << pids[i] << endl;
+                // parent_manager.release_pid(pids[i]); // UNCOMMENT WHEN IMPLEMENTED
+            }
+            cout << "Parent: completed work, releasing PIDs..." << endl;
+        } else {
+            cout << "Parent: allocate_map() failed" << endl;
         }
 
-return 0;
+        wait(NULL); // wait for child to finish
+        cout << "Parent: child process finished" << endl;
+        
+        return 0;
+    }
 }
+
+
+// redundant after main implementation, delete when finished
+//     // testing allocate_map() function with output of bitmap size and success/failure message
+//     PIDManager pid_manager;
+//     int result = pid_manager.allocate_map();
+//     if (result == 1) {
+//         cout << "allocate_map() success; bitmap size = " << pid_manager.bitmap_size() << '\n';
+//     } else {
+//         cout << "allocate_map() failed\n";
+//     }
+// //TEST FOR ALLOCATED_PID
+//         cout << "Allocating 5 PIDS test...\n";
+//         int pids[5];
+//         for (int i = 0; i <5; ++i){
+//                 pids[i] = pid_manager.allocate_pid();
+//                 cout << "Allocated PID: " << pids[i] << endl;
+//         }
+
+// return 0;
+// }
