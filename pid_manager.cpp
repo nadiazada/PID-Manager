@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <new>
+#include <cstring> // for strlen
 
 #define MIN_PID 100
 #define MAX_PID 1000
@@ -107,7 +108,18 @@ int main() {
         close(child_to_parent[0]);
         close(parent_to_child[1]);
 
-        // *** FOR CHILD send request and read, print message, release, done
+        // TASK 2. DELETE AFTER FINISHING
+        // send allocation request to parent
+        const char* request = "REQ_ALLOC";
+        ssize_t w = write(child_to_parent[1], request, std::strlen(request) + 1);
+        if (w < 0) {
+            perror("child write");
+        } else {
+            std::cout << "Child: Sent request for new PID to parent.\n";
+        }
+
+        // insert TASK 3 below
+
         exit(0);
     } else {
         close(child_to_parent[1]);
@@ -118,7 +130,8 @@ int main() {
         return 0;
     }
 
-
+    // Had to disable old test cases to avoid duplicate fork/pid (it wasnt running properly)
+    #if 0
     /*
     
     !!!!!!!!!!!!!!!!!!!!!!!!    CHECK IF CODE BELOW IS NEEDED !!!!!!!!!!!!!
@@ -199,4 +212,6 @@ int main() {
         
         return 0;
     }
+}
+#endif
 }
