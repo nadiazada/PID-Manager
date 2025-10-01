@@ -81,28 +81,49 @@ void release_pid(int pid) {
         bool is_ready_ = false; // initialized to false, will be true if allocate_map() is successful
 };
 
+// implement new functions here
+
+
+
 int main() {
-/*
-Requirement test cases:
-Call allocate_map to initialize the data structure.
-Call allocate_pid multiple times to allocate PIDs.
-Check if the allocated PIDs fall within the specified range.
-Call release_pid for each allocated PID.
-Check if the released PIDs become available for allocation again.
 
-What if test cases: 
-Test error handling by calling allocate_pid before calling allocate_map.
-Verify that allocate_pid returns -1.
-Test releasing a PID without initializing the data structure.
-Allocate and release PIDs in a loop for a large number of iterations.
-Test and check for memory leaks.
-Randomly allocate and release PIDs multiple times.
-Verify that the allocated PIDs are within the specified range.
-Ensure that released PIDs become available for allocation.
-Attempt to allocate a PID when the range is exhausted (MAX_PID - MIN_PID + 1 allocations).
-Check if the function returns -1, indicating that all PIDs are in use.
+    // new code for PID II assignment. TASK 1. DELETE AFTER FINISHING
+    // setting up two anonymous pipes
+    int child_to_parent[2];
+    int parent_to_child[2];
 
-*/
+    if(pipe(child_to_parent) == -1 || pipe(parent_to_child) == -1) {
+        cerr << "Pipe failed" << endl;
+        return 1;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        cerr << "Fork failed" << endl;
+        return 1;
+    }
+
+    if (pid == 0) {
+        close(child_to_parent[0]);
+        close(parent_to_child[1]);
+
+        // *** FOR CHILD send request and read, print message, release, done
+        exit(0);
+    } else {
+        close(child_to_parent[1]);
+        close(parent_to_child[0]);
+
+        // *** FOR PARENT read request, allocate, send response, wait, done
+        wait(NULL);
+        return 0;
+    }
+
+
+    /*
+    
+    CHECK IF CODE BELOW IS NEEDED
+    
+    */
 
 // what if test case: calling allocate_pid before allocate_map
     PIDManager test_manager;
@@ -179,24 +200,3 @@ Check if the function returns -1, indicating that all PIDs are in use.
         return 0;
     }
 }
-
-
-// redundant after main implementation, delete when finished
-//     // testing allocate_map() function with output of bitmap size and success/failure message
-//     PIDManager pid_manager;
-//     int result = pid_manager.allocate_map();
-//     if (result == 1) {
-//         cout << "allocate_map() success; bitmap size = " << pid_manager.bitmap_size() << '\n';
-//     } else {
-//         cout << "allocate_map() failed\n";
-//     }
-// //TEST FOR ALLOCATED_PID
-//         cout << "Allocating 5 PIDS test...\n";
-//         int pids[5];
-//         for (int i = 0; i <5; ++i){
-//                 pids[i] = pid_manager.allocate_pid();
-//                 cout << "Allocated PID: " << pids[i] << endl;
-//         }
-
-// return 0;
-// }
