@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <new>
 #include <cstring> // for strlen
-#include <cstudio>
+#include <cstdio>
 
 #define MIN_PID 100
 #define MAX_PID 1000
@@ -109,31 +109,35 @@ int main() {
         close(child_to_parent[0]);
         close(parent_to_child[1]);
 
-        // TASK 2. DELETE AFTER FINISHING
-        // send allocation request to parent
-        const char* request = "REQ_ALLOC";
-        ssize_t w = write(child_to_parent[1], request, std::strlen(request) + 1);
-        if (w < 0) {
-            perror("child write");
-        } else {
-            std::cout << "Child: Sent request for new PID to parent.\n";
+        // insert TASK 3 below
+        const char *allocMsg = "REQ_ALLOC\n";
+        write(child_to_parent[1], allocMsg, strlen(allocMsg));
+
+        // wait for parent to send back the allocated pid
+        char cbuf[128];
+        int n = read(parent_to_child[0], cbuf, sizeof(cbuf) - 1);
+        if (n > 0) {
+            cbuf[n] = '\0';
+            int newPID = -1;
+            if (sscanf(cbuf, "%d", &newPID) == 1) {
+                std::cout << "Hello from child, received PID: "
+                        << newPID << std::endl;
+
+                // ask parent to release that pid
+                char relMsg[64];
+                snprintf(relMsg, sizeof(relMsg), "REQ_RELEASE %d\n", newPID);
+                write(child_to_parent[1], relMsg, strlen(relMsg));
+            }
         }
 
-        // insert TASK 3 below
-        // ===== TEST BLOCK for Part #4 ONLY (remove later) =====
-        //we will manually ask the parent to release PID 150
-        //this will make the parent print:Parent received request to release PID: 150
-        //then we’ll tell the parent we’re done
-
-        const char* testRelease = "REQ_RELEASE 150\n";
-        write(child_to_parent[1], testRelease, strlen(testRelease));
-
-        const char* doneMsg = "DONE\n";
+        // tell parent we are done
+        const char *doneMsg = "DONE\n";
         write(child_to_parent[1], doneMsg, strlen(doneMsg));
-        // ===== END TEST BLOCK ==================================
+
+        // close pipe ends in child
         close(child_to_parent[1]);
         close(parent_to_child[0]);
-        exit(0);
+        _exit(0);
 
     } else {
 
@@ -150,8 +154,8 @@ int main() {
         char buf[128];
 
         while (true) {
-            // read up to 127 bytes so we can terminate
-            int n = (int)read(child_to_parent[0], buf, 127);
+            // read up to 1 byte less than buffer size
+            int n = (int)read(child_to_parent[0], buf, sizeof(buf) - 1);
             if (n <= 0) {
                 break;
             }
@@ -159,6 +163,14 @@ int main() {
             if (strncmp(buf, "DONE", 4) == 0) {
                 break;
             }
+
+            if (strncmp(buf, "REQ_ALLOC", 9) == 0) {
+                int newPID = manager.allocate_pid();
+                char reply[32];
+                snprintf(reply, sizeof(reply), "%d\n", newPID);
+                write(parent_to_child[1], reply, strlen(reply));
+            }
+
 
             //"REQ_RELEASE <pid>"
             if (strncmp(buf, "REQ_RELEASE", 11) == 0) {
