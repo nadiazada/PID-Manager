@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <new>
 #include <cstring> // for strlen
+#include <cstudio>
 
 #define MIN_PID 100
 #define MAX_PID 1000
@@ -119,16 +120,72 @@ int main() {
         }
 
         // insert TASK 3 below
+        // ===== TEST BLOCK for Part #4 ONLY (remove later) =====
+        //we will manually ask the parent to release PID 150
+        //this will make the parent print:Parent received request to release PID: 150
+        //then we’ll tell the parent we’re done
 
-        exit(0);
-    } else {
+        const char* testRelease = "REQ_RELEASE 150\n";
+        write(child_to_parent[1], testRelease, strlen(testRelease));
+
+        const char* doneMsg = "DONE\n";
+        write(child_to_parent[1], doneMsg, strlen(doneMsg));
+        // ===== END TEST BLOCK ==================================
         close(child_to_parent[1]);
         close(parent_to_child[0]);
+        exit(0);
 
-        // *** FOR PARENT read request, allocate, send response, wait, done
+    } else {
+
+
+    // *** FOR PARENT read request, allocate, send response, wait, done
+    // ===================== PARENT =====================
+        close(child_to_parent[1]);   // parent doesn't write to cto p
+        close(parent_to_child[0]);   // parent doesn't read from p to c
+
+        // Task 4: handle REQ_RELEASE and DONE only.
+        PIDManager manager;
+        manager.allocate_map(); // prepare PID table once
+
+        char buf[128];
+
+        while (true) {
+            // read up to 127 bytes so we can terminate
+            int n = (int)read(child_to_parent[0], buf, 127);
+            if (n <= 0) {
+                break;
+            }
+            buf[n] = '\0';
+            if (strncmp(buf, "DONE", 4) == 0) {
+                break;
+            }
+
+            //"REQ_RELEASE <pid>"
+            if (strncmp(buf, "REQ_RELEASE", 11) == 0) {
+                int relpid = -1;
+                if (sscanf(buf, "REQ_RELEASE %d", &relpid) == 1) {
+                    if (relpid >= MIN_PID && relpid <= MAX_PID) {
+                        manager.release_pid(relpid);
+                        //print:
+                        std::cout << "Parent received request to release PID: "
+                                  << relpid << std::endl;
+                    }
+                }
+                // continue to read next message
+            }
+
+            //tast 3 will implement child reading and sending REQ_RELEASE + DONE.
+        }
+
+        close(child_to_parent[0]);
+        close(parent_to_child[1]);
         wait(NULL);
+        std::cout << "Parent: child process finished" << std::endl;
         return 0;
     }
+
+
+
 
     // Had to disable old test cases to avoid duplicate fork/pid (it wasnt running properly)
     #if 0
